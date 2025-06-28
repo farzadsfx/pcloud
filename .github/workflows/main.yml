@@ -1,0 +1,30 @@
+name: Upload to pCloud
+
+on: [push]
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Install rclone
+        run: |
+          curl https://rclone.org/install.sh | sudo bash
+
+      - name: Create rclone config from secret
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONF_B64 }}" | base64 -d > ~/.config/rclone/rclone.conf
+
+      - name: Download and upload files
+        run: |
+          while IFS= read -r FILE_URL; do
+            FILE_NAME=$(basename "$FILE_URL")
+            echo "⬇️ Downloading $FILE_URL"
+            curl -L "$FILE_URL" -o "$FILE_NAME"
+            echo "📤 Uploading $FILE_NAME to pcloud:/"
+            rclone copy "$FILE_NAME" pcloud:/ --progress
+          done < files.txt
